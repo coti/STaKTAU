@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+###
+# STaKTAU, performance analyzing toot for the kernel
+# Trace analyzing tool.
+# Licence: GPL
+# Camille Coti, 2022, Université du Québec à Montréal
+##
 
 import sys
 from anytree import Node, RenderTree, PreOrderIter # Needed for the tree stuff

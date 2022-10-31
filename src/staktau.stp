@@ -1,5 +1,12 @@
 #! /bin/sh
 
+/**
+* STaKTAU, performance analyzing toot for the kernel
+* strace.stp (https://sourceware.org/systemtap/examples/process/strace.stp)
+* was a starting point.
+* Licence: GPL
+* Camille Coti, 2022, Université du Québec à Montréal
+*/
 
 /* configuration options; set these with stap -G */
 global follow_fork = 0   /* -Gfollow_fork=1 means trace descendant processes too */
