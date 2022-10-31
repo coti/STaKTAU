@@ -1,0 +1,73 @@
+#! /bin/sh
+
+
+/* configuration options; set these with stap -G */
+global follow_fork = 0   /* -Gfollow_fork=1 means trace descendant processes too */
+
+global tau = 1          /* -Gapex=1 means print something that can be used for interfacing with TAU */
+
+global thread_argstr%
+global thread_time%
+
+global syscalls_nonreturn[2]
+probe begin 
+  {
+    /* list those syscalls that never .return */
+    syscalls_nonreturn["exit"]=1
+    syscalls_nonreturn["exit_group"]=1
+  }
+
+
+function filter_p()
+  {
+    if (target() == 0) return 0; /* system-wide */
+    if (!follow_fork && pid() != target()) return 1; /* single-process */
+    if (follow_fork && !target_set_pid(pid())) return 1; /* multi-process */
+    return 0;
+  }
+
+probe nd_syscall.* 
+  {
+    if (filter_p()) next;
+
+    thread_argstr[tid()]=argstr
+    thread_time[tid()]=gettimeofday_us()
+
+    if( tau ) {
+     // if (name in syscalls_nonreturn){
+         report_tau( name, argstr, 0 )
+     // }
+    }
+  }
+
+probe nd_syscall.*.return
+  {
+    if (filter_p()) next;
+    
+    if( tau ) {
+        report_tau( name, thread_argstr[tid()], 1 )
+    } 
+  }
+
+function report_tau(syscall_name, syscall_argstr, enter ) /* 0 means enter, 1 means exit */
+  {
+      now = gettimeofday_ns()
+      no2 = get_cycles()
+      printf("%d %s(%s) [%d] time %d %d\n", enter, syscall_name, syscall_argstr, tid(), now, no2 )
+      printf( "CALLER: %s\n", callers( -1 ) )
+      print_all_utrace_info( syscall_name  )
+      print_all_trace_info( syscall_name  )
+      printf( "------\n" )
+  }
+
+function print_all_trace_info(point) {
+    printf("KERNEL backtrace from %s:\n", pp())
+    print_backtrace()
+    print("--------\n")
+}
+
+function print_all_utrace_info(point) {
+    printf("USER  backtrace from %s:\n", pp())
+    print_ubacktrace()
+    print("--------\n")
+}
