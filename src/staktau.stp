@@ -24,6 +24,15 @@ probe begin
     syscalls_nonreturn["exit_group"]=1
   }
 
+global MAXCALLS=1024
+global timer[1024] // does not accent MAXCALL, must be hard coded
+global entr[1024]
+global calls[1024]
+global argss[1024]
+global tids[1024]
+global kstack[1024]
+global ustack[1024]
+global cnt = 0
 
 function filter_p()
   {
@@ -41,9 +50,9 @@ probe nd_syscall.*
     thread_time[tid()]=gettimeofday_us()
 
     if( tau ) {
-     // if (name in syscalls_nonreturn){
+      if (!(name in syscalls_nonreturn) ){
          report_tau( name, argstr, 0 )
-     // }
+      } 
     }
   }
 
@@ -56,24 +65,57 @@ probe nd_syscall.*.return
     } 
   }
 
+function dump_data()
+  {
+      foreach( cnt in timer ){
+	 printf( "%d %s(%s) [%d] %d \n", entr[cnt], calls[cnt], argss[ cnt ], tids[cnt], timer[cnt] )
+	 printf("KERNEL backtrace %s:\n", calls[cnt] )
+	 printf( "%s\n", kstack[cnt] )
+	 printf("USER backtrace %s:\n", calls[cnt] )
+	 printf( "%s\n", ustack[cnt] )
+         printf( "------\n" )
+      }
+      
+  }
+
 function report_tau(syscall_name, syscall_argstr, enter ) /* 0 means enter, 1 means exit */
   {
       now = gettimeofday_ns()
       no2 = get_cycles()
-      printf("%d %s(%s) [%d] time %d %d\n", enter, syscall_name, syscall_argstr, tid(), now, no2 )
-      printf( "CALLER: %s\n", callers( -1 ) )
-      print_all_utrace_info( syscall_name  )
-      print_all_trace_info( syscall_name  )
-      printf( "------\n" )
+ //     printf("%d %s(%s) [%d] time %d %d\n", enter, syscall_name, syscall_argstr, tid(), now, no2 )
+ //     printf( "CALLER: %s\n", callers( -1 ) )
+      store_all_info(  now, syscall_name, syscall_argstr, enter )
+      
+   //   print_all_utrace_info( syscall_name  )
+   //   print_all_trace_info( syscall_name  )
+   //   printf( "------\n" )
   }
 
-function print_all_trace_info(point) {
+function store_all_info( now, syscall_name, syscall_argstr, enter )
+  {
+      timer[ cnt ] = now
+      calls[ cnt ] = syscall_name
+      argss[ cnt ] = syscall_argstr
+      entr[ cnt ] = enter
+      tids [ cnt ] = tid()
+      kstack[ cnt ]= sprint_backtrace()
+      ustack[ cnt ]= sprint_ubacktrace()
+      cnt++
+      if( cnt == MAXCALLS ){
+	    cnt = 0;
+	    dump_data()
+      }
+}
+  
+function print_all_trace_info(point)
+  {
     printf("KERNEL backtrace from %s:\n", pp())
     print_backtrace()
     print("--------\n")
 }
 
-function print_all_utrace_info(point) {
+function print_all_utrace_info(point)
+  {
     printf("USER  backtrace from %s:\n", pp())
     print_ubacktrace()
     print("--------\n")

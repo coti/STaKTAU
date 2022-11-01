@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 ###
-# STaKTAU, performance analyzing toot for the kernel
+# STaKTAU, performance analyzing tool for the kernel
 # Trace analyzing tool.
 # Licence: GPL
 # Camille Coti, 2022, Université du Québec à Montréal
@@ -78,10 +78,9 @@ def split_probe( line ):
 
 def read_stack( fd, ln ):
     stack = []
-    l1 = ln.split( '\"' )
-    call = l1[1]
-    # print( "CALL: ", call )
-    
+    #l1 = ln.split( '\"' )
+    l1 = ln.split( )
+    call = l1[-1]
     for line in fd:
         if line.startswith( '--' ):
             return call, stack
@@ -95,10 +94,9 @@ def readfile( fn ):
     probes = {}    
     with open( fn ) as fd:
         for line in fd:
-           # print( line )
            if line[0] == '0' or line[0] =='1':
                enter, call, tid, tsc = split_probe( line )
-               _ = fd.readline() # not used yet
+               #_ = fd.readline() # not used yet
                if not tid in probes:
                    probes[ tid ] = {}
                probes[ tid ][ ( tsc, enter ) ] = { 'call': call }
@@ -147,7 +145,6 @@ def build_tree( probes ):
                 current.name[ 'time' ] = ts - current.name[ 'time' ]
                 current = parent
                 parent = current.parent
-              #  print( "exit ", info[ 'call' ] )
             if enter:                
                 # TODO add more info in the node
                 # Enter a call. Are we already in a call?
